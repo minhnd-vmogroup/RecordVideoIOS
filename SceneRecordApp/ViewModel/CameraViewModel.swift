@@ -23,20 +23,35 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
         self.previewURL = outputFileURL
     }
     
-    @Published var session = AVCaptureSession()
+    
     @Published var alert = false
-    @Published var output = AVCaptureMovieFileOutput()
-    @Published var preview : AVCaptureVideoPreviewLayer!
     @Published var isSave = false
     @Published var picData = Data(count: 0)
-    @Published var isRecording:Bool = false
     @Published var recordingURL : [URL] = []
-    @Published var previewURL : URL?
     @Published var showPreview: Bool = false
     @Published var isExport: Bool = false
-    @Published var recordDulation : CGFloat = 1.0
-    @Published var maxDuration : CGFloat = 29.0
     @Published var fileFormat = FileFormat(textFieldValue: "")
+    
+    @Published var session = AVCaptureSession()
+    @Published var isRecording : Bool = false
+    @Published var isSending : Bool = false
+    @Published var isAnalysis : Bool = false
+    @Published var output = AVCaptureMovieFileOutput()
+    @Published var preview : AVCaptureVideoPreviewLayer!
+    @Published var previewURL : URL?
+    @Published var recordDulation : CGFloat = 0.0
+    @Published var maxDuration : CGFloat = 3.0
+    @Published var sendingDulation : CGFloat = 0.0
+    @Published var maxSending : CGFloat = 3.0
+    @Published var analysisDulation : CGFloat = 0.0
+    @Published var maxAnalysis : CGFloat = 2.0
+    @Published var logStatus : String = "Ready for record!"
+    @Published var buttonStatus : String = "Start"
+    @Published var showButton : Bool = true
+    @Published var sendingDuration : CGFloat = 3.0
+    @Published var analysisDuration : CGFloat = 2.0
+    @Published var showResult : Bool = false
+    
     
     
     
@@ -90,48 +105,33 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
     func startRecording(){
         let tempURL = NSTemporaryDirectory() + "\(Date()).mp4"
         output.startRecording(to: URL(fileURLWithPath: tempURL), recordingDelegate: self)
+        previewURL = URL(string: tempURL)
+        buttonStatus = "Reset"
         isRecording = true
     }
 
-    func stopRecording(){
+    func resetRecording(){
         output.stopRecording()
+        buttonStatus = "Start"
+        logStatus = "Ready for start!"
+        recordDulation = 0.0
         isRecording = false
+        isSending = false
+    }
+    
+    func wait(for duration: TimeInterval, then completion: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            completion()
+        }
     }
     
     func submitFileFormat(_ fileFormat: FileFormat) {
         print(fileFormat.textFieldValue)
         }
     
-    func export(withPreset preset: String = AVAssetExportPresetHighestQuality,
-                toFileType outputFileType: AVFileType = .mov) async {
-        print("Start export??")
-        let video = AVAsset(url: self.previewURL!)
-        let outputURL: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("video.mp4", isDirectory: false)
-        isExport = true
-        print("Output url: ", outputURL)
-        // Check the compatibility of the preset to export the video to the output file type.
-        guard await AVAssetExportSession.compatibility(ofExportPreset: preset,
-                                                       with: video,
-                                                       outputFileType: outputFileType) else {
-            print("The preset can't export the video to the output file type.")
-            return
-        }
-        
-        // Create and configure the export session.
-        guard let exportSession = AVAssetExportSession(asset: video,
-                                                       presetName: preset) else {
-            print("Failed to create export session.")
-            return
-        }
-        exportSession.outputFileType = outputFileType
-        exportSession.outputURL = outputURL
-        
-        // Convert the video to the output file type and export it to the output URL.
-        await exportSession.export()
-    }
     
     func uploadVideo(filename: String) {
-        guard let url = URL(string: "http://172.16.2.246:5000/upload-video") else { return }
+        guard let url = URL(string: "http://172.16.2.204:5000/upload-video") else { return }
         var request = URLRequest(url: url)
         let timestamp = Date.now
         let formatter1 = DateFormatter()
@@ -146,7 +146,7 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
         
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: String.Encoding.utf8)!)
-        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(filename).mp4\"\r\n".data(using: String.Encoding.utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"minhnd_2.mp4\"\r\n".data(using: String.Encoding.utf8)!)
         body.append("Content-Type: video/mp4\r\n\r\n".data(using: String.Encoding.utf8)!)
         body.append(videoData!)
         body.append("\r\n".data(using: String.Encoding.utf8)!)
@@ -165,6 +165,48 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
         task.resume()
         
     }
+    
+    var retryCount = 0
+    
+//    func uploadMinio(){
+//        let endpointURL = "http://172.16.2.189:9090/buckets/medicaldata/"
+////        let headers: HTTPHeaders = ["Content-Type": "video/mp4"]
+//
+//        let accessKey = "pk7cpdnJsQOXJHOq"
+//        let secretKey = "WLG8SbW9MfLatEfHLruXGGMbOw4vnCxG"
+//
+//        let headers: HTTPHeaders = [
+//            "Content-Type": "application/octet-stream",
+//            "Authorization": "AWS \(accessKey):\(secretKey)"
+//        ]
+//
+//        // Set up the file path and object name of the video file you want to upload
+////        let filePath = previewURL
+//        let objectName = UUID().uuidString
+//        let videoData = try? Data(contentsOf: self.previewURL!)
+////        print("Try video data: ", videoData)
+//
+//        // Upload the video file to the MinIO server using Alamofire
+//        AF.upload(multipartFormData: { (multipartFormData) in
+//            multipartFormData.append(videoData!, withName: objectName, fileName: objectName + ".mp4", mimeType: "video/mp4")
+//        }, to: endpointURL, headers: headers)
+//        .responseJSON { (response) in
+//            switch response.result {
+//            case .success(let value):
+//                print("Uploaded object:", objectName)
+//                print("Response:", value)
+//            case .failure(let error):
+//                print("Error uploading object:", error.localizedDescription)
+//                self.retryCount += 1
+//                if self.retryCount < 3 {
+//                    // Retry the request after a delay of 5 seconds
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+//                        self.uploadMinio()
+//                    }
+//                }
+//            }
+//        }
+//    }
 }
 
 struct FileFormat: Codable {

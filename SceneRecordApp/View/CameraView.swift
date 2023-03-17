@@ -13,17 +13,20 @@ struct CameraView: View {
     var body: some View {
         GeometryReader{ proxy in
             let size = proxy.size
-            CameraPreview(size: size)
-                .environmentObject(cameraModel)
-            
+            VStack{
+                CameraPreview(size: size)
+                    .environmentObject(cameraModel)
+            }
+            // Time duration
             ZStack(alignment: .leading) {
                 Rectangle()
                     .fill(.black.opacity(0.25))
                 Rectangle()
                     .fill(Color(.red))
                     .frame(width: size.width * (cameraModel.recordDulation / cameraModel.maxDuration))
+                
             }
-            .frame(height: 8)
+            .frame(height: 12)
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .onAppear(perform: cameraModel.CheckPermission)
@@ -34,15 +37,17 @@ struct CameraView: View {
             if cameraModel.recordDulation <= cameraModel.maxDuration && cameraModel.isRecording{
                 cameraModel.recordDulation += 0.01;
             }
-            if cameraModel.recordDulation >= cameraModel.maxDuration && cameraModel.isRecording {
-                cameraModel.stopRecording()
-                cameraModel.isRecording = false
+            else if cameraModel.sendingDulation <= cameraModel.maxSending && cameraModel.isSending {
+                cameraModel.sendingDulation += 0.01;
+            }
+            else if cameraModel.analysisDulation <= cameraModel.maxAnalysis && cameraModel.isAnalysis {
+                cameraModel.analysisDulation += 0.01;
             }
         }
         
     }
 }
-    
+
 //setting view for preview
 struct CameraPreview: UIViewRepresentable {
     @EnvironmentObject var CameraModel: CameraViewModel
@@ -51,6 +56,8 @@ struct CameraPreview: UIViewRepresentable {
         let view = UIView()
         CameraModel.preview = AVCaptureVideoPreviewLayer(session: CameraModel.session)
         CameraModel.preview.frame.size = size
+        print("Preview UIViewRepresentable")
+        
         //Your own property...
         CameraModel.preview.videoGravity = .resizeAspectFill
         view.layer.addSublayer(CameraModel.preview)
