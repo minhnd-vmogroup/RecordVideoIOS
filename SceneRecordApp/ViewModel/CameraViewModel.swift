@@ -40,7 +40,7 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
     @Published var preview : AVCaptureVideoPreviewLayer!
     @Published var previewURL : URL?
     @Published var recordDulation : CGFloat = 0.0
-    @Published var maxDuration : CGFloat = 3.0
+    @Published var maxDuration : CGFloat = 10.0
     @Published var sendingDulation : CGFloat = 0.0
     @Published var maxSending : CGFloat = 3.0
     @Published var analysisDulation : CGFloat = 0.0
@@ -51,6 +51,7 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
     @Published var sendingDuration : CGFloat = 3.0
     @Published var analysisDuration : CGFloat = 2.0
     @Published var showResult : Bool = false
+    @Published var PPM : String = "Predicting"
     
     
     
@@ -146,7 +147,7 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
         
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: String.Encoding.utf8)!)
-        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"minhnd_2.mp4\"\r\n".data(using: String.Encoding.utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"nguyen_2.mp4\"\r\n".data(using: String.Encoding.utf8)!)
         body.append("Content-Type: video/mp4\r\n\r\n".data(using: String.Encoding.utf8)!)
         body.append(videoData!)
         body.append("\r\n".data(using: String.Encoding.utf8)!)
@@ -158,6 +159,18 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
             if error != nil {
                 print(error?.localizedDescription as Any)
             }else{
+//                PPM = response["ppm"]
+                do {
+                        // Parse the JSON data into a dictionary
+                    if let json = try JSONSerialization.jsonObject(with: data!, options: []) as? [String: Any] {
+                            // Access the properties of the JSON object
+                        let propertyValue = json["HR"] as? String
+                        self.PPM = String(propertyValue!)
+                            print(propertyValue)
+                        }
+                    } catch {
+                        // Handle JSON parsing errors here...
+                    }
                 print("success upload")
             }
             print("Another session!")
@@ -168,45 +181,6 @@ class CameraViewModel: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate
     
     var retryCount = 0
     
-//    func uploadMinio(){
-//        let endpointURL = "http://172.16.2.189:9090/buckets/medicaldata/"
-////        let headers: HTTPHeaders = ["Content-Type": "video/mp4"]
-//
-//        let accessKey = "pk7cpdnJsQOXJHOq"
-//        let secretKey = "WLG8SbW9MfLatEfHLruXGGMbOw4vnCxG"
-//
-//        let headers: HTTPHeaders = [
-//            "Content-Type": "application/octet-stream",
-//            "Authorization": "AWS \(accessKey):\(secretKey)"
-//        ]
-//
-//        // Set up the file path and object name of the video file you want to upload
-////        let filePath = previewURL
-//        let objectName = UUID().uuidString
-//        let videoData = try? Data(contentsOf: self.previewURL!)
-////        print("Try video data: ", videoData)
-//
-//        // Upload the video file to the MinIO server using Alamofire
-//        AF.upload(multipartFormData: { (multipartFormData) in
-//            multipartFormData.append(videoData!, withName: objectName, fileName: objectName + ".mp4", mimeType: "video/mp4")
-//        }, to: endpointURL, headers: headers)
-//        .responseJSON { (response) in
-//            switch response.result {
-//            case .success(let value):
-//                print("Uploaded object:", objectName)
-//                print("Response:", value)
-//            case .failure(let error):
-//                print("Error uploading object:", error.localizedDescription)
-//                self.retryCount += 1
-//                if self.retryCount < 3 {
-//                    // Retry the request after a delay of 5 seconds
-//                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-//                        self.uploadMinio()
-//                    }
-//                }
-//            }
-//        }
-//    }
 }
 
 struct FileFormat: Codable {

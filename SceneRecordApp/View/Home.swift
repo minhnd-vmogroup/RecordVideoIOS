@@ -95,9 +95,7 @@ struct Home: View {
                         cameraModel.isSending = false
                         cameraModel.isAnalysis = true
                         cameraModel.sendingDulation = 0.0
-                        print("3: ",cameraModel.previewURL)
                         cameraModel.uploadVideo(filename: "minhnd")
-//                        cameraModel.uploadMinio()
                     }
                     else if cameraModel.analysisDulation >= cameraModel.maxAnalysis {
                         cameraModel.analysisDulation = 0.0
@@ -110,7 +108,7 @@ struct Home: View {
         .overlay(content: {
             ZStack (alignment: .top){
                 if let url = cameraModel.previewURL, cameraModel.showPreview {
-                    ResultAnalysis(buttonStatus: $cameraModel.buttonStatus, logStatus: $cameraModel.logStatus, showButton: $cameraModel.showButton, showPreview: $cameraModel.showPreview)
+                    ResultAnalysis(buttonStatus: $cameraModel.buttonStatus, logStatus: $cameraModel.logStatus, showButton: $cameraModel.showButton, showPreview: $cameraModel.showPreview, ppm: $cameraModel.PPM)
                 }
             }
         })
@@ -152,6 +150,8 @@ struct ResultAnalysis : View{
     @Binding var logStatus : String
     @Binding var showButton : Bool
     @Binding var showPreview : Bool
+    @Binding var ppm : String
+    @State private var myPPM : String = "Predicting"
     var body: some View{
         GeometryReader{ proxy in
             let size = proxy.size
@@ -162,16 +162,22 @@ struct ResultAnalysis : View{
                         .font(.system(size: 80))
                         .foregroundColor(.red)
                         .padding(.bottom, 50)
+                    
+                    Text("HR: \(myPPM)")
                     Spacer()
                     Button("END") {
                         logStatus = "Ready for start!"
                         buttonStatus = "Start"
+                        ppm = "Predicting"
                         showButton.toggle()
                         showPreview.toggle()
                     }
                     .frame(width: 250, height: 50)
                     .background(.gray)
                     .padding(.bottom, 30)
+                }
+                .onReceive(Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()) { _ in
+                        myPPM = ppm
                 }
             }
             .frame(width: size.width, height: size.height)
